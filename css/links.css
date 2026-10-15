@@ -1,0 +1,121 @@
+/* Rychlé odkazy: řádky dlaždic nahoře, zarovnané na střed. Šířku řádku určuje --per-row. */
+.links {
+  --tile-w: 96px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 4px;
+  width: 100%;
+  max-width: calc(var(--per-row, 8) * (var(--tile-w) + 4px));
+}
+.links[hidden] { display: none; }
+
+.ql { position: relative; width: var(--tile-w); }
+.ql-link, .ql-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 4px;
+  border-radius: 14px;
+  color: var(--on-bg);
+  text-decoration: none;
+}
+.ql.ql-add { width: var(--tile-w); border: 0; background: none; min-height: 0; font-weight: 400; }
+.ql-add:hover { background: none; }
+
+.ql-ico {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--tile);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  transition: transform 0.12s ease;
+}
+.ql-link:hover .ql-ico, .ql-add:hover .ql-ico { transform: translateY(-2px); }
+.ql-ico img { width: 44px; height: 44px; object-fit: contain; border-radius: 10px; }
+.ql-ico img.small { width: 32px; height: 32px; border-radius: 6px; } /* malé favicony nezvětšovat, jinak jsou rozmazané */
+.ql-emoji { font-size: 36px; line-height: 1; }
+.ql-letter {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: hsl(var(--h, 260) 52% 46%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+.ql-add .ql-ico {
+  background: var(--on-bg-hover);
+  border: 1.5px dashed currentColor;
+  box-shadow: none;
+  opacity: 0.75;
+}
+.ql-add .ql-ico svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.ql-add:hover .ql-ico { opacity: 1; }
+
+.ql-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+[data-bg="photo"] .ql-name { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65); }
+
+.ql-more {
+  position: absolute;
+  top: 2px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--glass-strong);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0;
+}
+.ql:hover .ql-more, .ql:focus-within .ql-more { opacity: 1; }
+.ql-more:hover { background: var(--surface); }
+@media (hover: none) { .ql-more { opacity: 0.9; } }
+
+.ql.dragging { opacity: 0.4; }
+.ql.drop .ql-ico { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* menu u dlaždice */
+.ql-pop {
+  position: absolute;
+  z-index: 50;
+  display: grid;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.ql-pop[hidden] { display: none; }
+.ql-pop button { border: 0; background: none; text-align: left; min-height: 34px; padding: 6px 12px; border-radius: 8px; font-weight: 500; }
+.ql-pop button:hover { background: var(--surface-2); }
+.ql-pop button.danger { color: var(--danger); }
+
+@media (max-width: 640px) {
+  .links { --tile-w: 78px; }
+  .ql-ico { width: 54px; height: 54px; border-radius: 16px; }
+  .ql-ico img { width: 38px; height: 38px; }
+  .ql-ico img.small { width: 28px; height: 28px; }
+  .ql-more { right: 2px; }
+}

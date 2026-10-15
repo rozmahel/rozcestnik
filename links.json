@@ -1,0 +1,8 @@
+[
+  { "name": "GitHub", "url": "https://github.com" },
+  { "name": "YouTube", "url": "https://www.youtube.com" },
+  { "name": "Úkolníček", "url": "https://rozmahel.github.io/ukolnicek/" },
+  { "name": "Outlook", "url": "https://outlook.office.com/mail/" },
+  { "name": "Můj disk", "url": "https://drive.google.com/drive/my-drive" },
+  { "name": "Facebook", "url": "https://www.facebook.com" }
+]

@@ -1,0 +1,56 @@
+/* Rámeček widgetu (poloprůhledná karta); vnitřek spravuje sám widget. */
+.widget {
+  display: flex;
+  flex-direction: column;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  overflow: hidden;
+}
+
+.widget-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 12px 6px 18px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  user-select: none;
+}
+.widget-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.widget-btn {
+  border: 0;
+  background: none;
+  min-height: 0;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.widget-btn:hover { color: var(--text); background: var(--on-bg-hover); }
+.widget-close { display: none; }
+
+.widget-body { flex: 1; min-height: 0; overflow: auto; padding: 6px 18px 16px; }
+.widget-error { color: var(--danger); margin: 0; }
+
+/* režim úprav */
+.grid-stack.editing .widget-head { cursor: move; }
+.grid-stack.editing .widget-close { display: inline-block; }
+.grid-stack.editing .widget { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.grid-stack.editing { min-height: 160px; border-radius: var(--radius); background: var(--on-bg-hover); }
+.grid-stack-placeholder > .placeholder-content {
+  border: 2px dashed var(--accent) !important;
+  border-radius: var(--radius);
+  background: var(--accent-soft) !important;
+  opacity: 0.5;
+}
+
+.widget.flash { outline: 3px solid var(--accent); outline-offset: 2px; }

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="cs" data-bg="color">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rozcestník</title>
+  <link rel="stylesheet" href="vendor/gridstack/gridstack.min.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/links.css">
+  <link rel="stylesheet" href="css/grid.css">
+  <link rel="stylesheet" href="css/search.css">
+</head>
+<body>
+  <div id="bg" class="bg" aria-hidden="true"></div>
+
+  <header class="corner">
+    <button type="button" id="btn-edit" class="icon-btn" aria-pressed="false" title="Upravit plochu" aria-label="Upravit plochu">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
+    </button>
+    <button type="button" id="btn-settings" class="icon-btn" title="Nastavení" aria-label="Nastavení">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+    </button>
+  </header>
+
+  <div class="page">
+    <nav id="links" class="links" aria-label="Rychlé odkazy"></nav>
+
+    <form id="search" class="search" role="search" autocomplete="off">
+      <select id="search-engine" aria-label="Vyhledávač"></select>
+      <input id="search-input" type="text" role="combobox" aria-expanded="false" placeholder="Hledat na webu nebo v aplikacích"
+             aria-label="Hledat" aria-controls="search-list" aria-autocomplete="list">
+      <kbd class="search-key" aria-hidden="true">/</kbd>
+      <ul id="search-list" class="search-list" role="listbox" hidden></ul>
+    </form>
+
+    <div id="edit-bar" class="edit-bar" hidden>
+      <span>Úpravy plochy: widget přesuneš za hlavičku, velikost změníš za pravý dolní roh.</span>
+      <span class="edit-bar-actions">
+        <button type="button" id="btn-add-widget">Přidat widget</button>
+        <button type="button" id="btn-edit-done" class="primary">Hotovo</button>
+      </span>
+    </div>
+
+    <main class="board">
+      <p id="empty" class="empty" hidden>Tady je místo pro widgety. Zapneš je v nastavení (ozubené kolo vpravo nahoře).</p>
+      <div id="grid" class="grid-stack"></div>
+    </main>
+  </div>
+
+  <p id="bg-credit" class="bg-credit" hidden></p>
+
+  <script src="vendor/gridstack/gridstack-all.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

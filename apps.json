@@ -1,0 +1,9 @@
+[
+  {
+    "id": "example",
+    "name": "Ukázková aplikace",
+    "url": "https://example.com",
+    "icon": "🔗",
+    "tags": ["ukázka"]
+  }
+]
