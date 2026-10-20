@@ -1,5 +1,7 @@
 // Rychlé odkazy nad vyhledávačem: dlaždice s ikonou v patrech (každé patro = řádek),
 // přidání, úprava, odebrání, přeřazení a přesun mezi patry.
+// Ikona: nahraná (vlastni-ikony/…png, uložená v prohlížeči), emoji, adresa obrázku, jinak ze samotné stránky.
+import { isUserIcon, iconUrl, preloadIcons, toPng, newIconPath, saveIcon, cleanupIcons } from './usericons.js';
 // Ikony se berou ze samotné stránky (HTML, apple-touch-icon, favicon.ico); přes Google jen po zapnutí v nastavení.
 const ICON_KEY = 'rozcestnik:icons2';
 try { localStorage.removeItem('rozcestnik:icons'); } catch { /* starý formát mezipaměti */ }
@@ -144,15 +146,22 @@ function imgEl(src, w) {
   return img;
 }
 
-// Ikona: vlastní (emoji nebo adresa obrázku), jinak nalezená, jinak písmeno.
+// Ikona: vlastní (nahraná, emoji nebo adresa obrázku), jinak nalezená, jinak písmeno.
+// Nahraná ikona, jejíž soubor v prohlížeči chybí, se chová jako žádná (výchozí ikona).
 function icon(link, google) {
   const box = el('span', 'ql-ico');
   const custom = link.icon?.trim();
-  if (custom && !isHttp(custom)) {
+  if (isUserIcon(custom)) {
+    const src = iconUrl(custom);
+    if (src) {
+      box.append(imgEl(src));
+      return box;
+    }
+  } else if (custom && !isHttp(custom)) {
     box.append(el('span', 'ql-emoji', custom));
     return box;
   }
-  if (custom) {
+  if (custom && isHttp(custom)) {
     const img = imgEl(custom);
     img.addEventListener('error', () => img.replaceWith(letter(link)), { once: true });
     box.append(img);
@@ -264,6 +273,7 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     const f = focusLink ? kept.findIndex((items) => items.includes(focusLink)) : -1;
     const flat = flatten(kept);
     saveLinks(flat);
+    cleanupIcons(flat.map((l) => l.icon)); // soubory vyměněných a odebraných ikon
     floors = toFloors(flat);
     render();
     const target = f >= 0 ? tileEl(f, kept[f].indexOf(focusLink))?.querySelector('.ql-link') : null;
@@ -323,7 +333,48 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
       form.append(l);
     }
 
-    const ico = field('Ikona (volitelně: emoji nebo adresa obrázku)', link.icon || '', 'text', 'prázdné = ikona stránky');
+    const ico = field('Ikona (volitelně: emoji, adresa obrázku nebo nahraný obrázek)', link.icon || '', 'text', 'prázdné = ikona stránky');
+
+    // nahraný obrázek se uloží v prohlížeči (až po Uložit), do pole se zapíše jen jeho cesta
+    let pending = null; // { path, blob, url }
+    const upload = el('div', 'ql-upload');
+    const preview = el('img');
+    preview.alt = '';
+    const file = el('input');
+    file.type = 'file';
+    file.accept = 'image/*';
+    file.hidden = true;
+    const pick = el('button', 'small', 'Nahrát obrázek…');
+    pick.type = 'button';
+    pick.addEventListener('click', () => file.click());
+    const note = el('small');
+    upload.append(preview, pick, note, file);
+    form.append(upload);
+
+    function showPreview() {
+      const v = ico.value.trim();
+      const src = pending && v === pending.path ? pending.url : (isUserIcon(v) ? iconUrl(v) : null);
+      preview.hidden = !src;
+      if (src) preview.src = src;
+      note.textContent = isUserIcon(v) && !src ? 'Soubor ikony v tomhle prohlížeči chybí, ukazuje se výchozí. Nahraj nový.' : '';
+    }
+    ico.addEventListener('input', showPreview);
+    file.addEventListener('change', async () => {
+      const f = file.files[0];
+      file.value = '';
+      if (!f) return;
+      try {
+        const blob = await toPng(f);
+        if (pending) URL.revokeObjectURL(pending.url);
+        pending = { path: newIconPath(name.value.trim() || hostOf(normalizeUrl(url.value))), blob, url: URL.createObjectURL(blob) };
+        ico.value = pending.path;
+        error.textContent = '';
+        showPreview();
+      } catch (err) {
+        error.textContent = err.message;
+      }
+    });
+    showPreview();
     const error = el('p', 'form-error');
     error.setAttribute('role', 'alert');
 
@@ -336,7 +387,7 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     row.append(cancel, save);
     form.append(error, row);
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const href = normalizeUrl(url.value);
       if (!isHttp(href)) { error.textContent = 'Zadej platnou webovou adresu.'; url.focus(); return; }
@@ -350,6 +401,14 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
       iconCache.set(href, undefined);
       iconCache.set(`g|${href}`, undefined);
       if (iconText) item.icon = iconText;
+      if (pending && iconText === pending.path) {
+        try {
+          await saveIcon(pending.path, pending.blob);
+        } catch {
+          error.textContent = 'Ikonu se nepodařilo uložit do prohlížeče.';
+          return;
+        }
+      }
 
       const target = floorSel ? Number(floorSel.value) : 0;
       const next = floors.map((items) => [...items]);
@@ -364,7 +423,10 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
       persist(next, item);
     });
 
-    dlg.addEventListener('close', () => dlg.remove());
+    dlg.addEventListener('close', () => {
+      dlg.remove();
+      if (pending) URL.revokeObjectURL(pending.url);
+    });
     dlg.append(form);
     document.body.append(dlg);
     dlg.showModal();
@@ -473,6 +535,7 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     root.hidden = !view.show;
     if (!view.show) return;
     root.style.setProperty('--per-row', view.perRow);
+    root.dataset.align = view.align;
     const rows = (floors.length ? floors : [[]]).map((items, f) => {
       const row = el('div', 'ql-floor');
       row.dataset.f = f;
@@ -485,8 +548,11 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
 
   return {
     async load() {
-      floors = toFloors(await getLinks());
+      const list = await getLinks();
+      await preloadIcons(list.map((l) => l.icon));
+      floors = toFloors(list);
       render();
+      cleanupIcons(list.map((l) => l.icon));
     },
     render,
   };

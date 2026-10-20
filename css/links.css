@@ -1,13 +1,22 @@
-/* Rychlé odkazy: patra pod sebou, každé patro je řádek dlaždic zarovnaný na střed.
-   Šířku řádku určuje --per-row. Mezera mezi patry je větší než mezi zalomenými řádky jednoho patra. */
+/* Rychlé odkazy: patra pod sebou, každé patro je řádek dlaždic. Šířku řádku určuje --per-row,
+   zarovnání (data-align) vlevo / na střed / vpravo k okrajům plochy.
+   Mezera mezi patry je větší než mezi zalomenými řádky jednoho patra. */
 .links {
   --tile-w: 96px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   width: 100%;
-  max-width: calc(var(--per-row, 8) * (var(--tile-w) + 4px));
 }
+.ql-floor, .ql-new-floor {
+  width: 100%;
+  max-width: calc(var(--per-row, 8) * (var(--tile-w) + 4px));
+  margin-inline: auto;
+}
+.links[data-align="left"] :is(.ql-floor, .ql-new-floor) { margin-inline: 0 auto; }
+.links[data-align="right"] :is(.ql-floor, .ql-new-floor) { margin-inline: auto 0; }
+.links[data-align="left"] .ql-floor { justify-content: flex-start; }
+.links[data-align="right"] .ql-floor { justify-content: flex-end; }
 .links[hidden] { display: none; }
 
 .ql-floor {
@@ -119,6 +128,12 @@
 
 .ql.dragging { opacity: 0.4; }
 .ql.drop .ql-ico { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* nahrání vlastní ikony v dialogu */
+.ql-upload { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: -4px 0 12px; }
+.ql-upload img { width: 40px; height: 40px; object-fit: contain; border-radius: 10px; background: var(--surface-2); }
+.ql-upload small { flex-basis: 100%; color: var(--muted); }
+.ql-upload small:empty { display: none; }
 
 /* menu u dlaždice */
 .ql-pop {

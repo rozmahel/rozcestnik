@@ -8,10 +8,9 @@ const defaults = () => ({
   settings: {},
   theme: 'auto',
   search: { engine: 'g' },
-  serviceUrl: null,
   apps: null, // null = výchozí seznam z apps.json
   links: null, // null = výchozí rychlé odkazy z links.json
-  linksView: { show: true, perRow: 8, searchTop: false, googleIcons: false },
+  linksView: { show: true, perRow: 8, align: 'center', searchTop: false, googleIcons: false },
   background: { mode: 'photo', every: 'day', color: null },
 });
 
@@ -82,7 +81,6 @@ function sanitize(data, mins) {
     settings,
     theme: ['auto', 'light', 'dark'].includes(data.theme) ? data.theme : d.theme,
     search: { engine: typeof data.search?.engine === 'string' ? data.search.engine : d.search.engine },
-    serviceUrl: cleanUrl(data.serviceUrl),
     apps: cleanApps(data.apps),
     links: cleanLinks(data.links),
     linksView: cleanLinksView(data.linksView),
@@ -96,6 +94,7 @@ function cleanLinksView(v) {
   return {
     show: typeof v.show === 'boolean' ? v.show : d.show,
     perRow: clampInt(v.perRow, 4, 12, d.perRow),
+    align: ['left', 'center', 'right'].includes(v.align) ? v.align : d.align,
     searchTop: typeof v.searchTop === 'boolean' ? v.searchTop : d.searchTop,
     googleIcons: typeof v.googleIcons === 'boolean' ? v.googleIcons : d.googleIcons,
   };
@@ -173,8 +172,8 @@ export function widgetStorage(id) {
 }
 
 export function exportJson() {
-  const { layout, settings, theme, search, serviceUrl, apps, links, linksView, background } = state;
-  return JSON.stringify({ version: VERSION, layout, settings, theme, search, serviceUrl, apps, links, linksView, background }, null, 2);
+  const { layout, settings, theme, search, apps, links, linksView, background } = state;
+  return JSON.stringify({ version: VERSION, layout, settings, theme, search, apps, links, linksView, background }, null, 2);
 }
 
 export function download(filename, text) {
@@ -208,15 +207,6 @@ export function importJson(text, knownMins) {
   }
   update((s) => { Object.assign(s, clean); });
   return { ok: true };
-}
-
-// Prázdný text = bez servisní vrstvy. Vrací false, když adresa není http(s).
-export function setServiceUrl(value) {
-  const text = String(value ?? '').trim();
-  const url = text ? cleanUrl(text) : null;
-  if (text && !url) return false;
-  update((s) => { s.serviceUrl = url; });
-  return true;
 }
 
 // Obnoví výchozí rozložení, nastavení widgetů zůstanou.

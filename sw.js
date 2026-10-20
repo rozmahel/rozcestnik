@@ -2,9 +2,9 @@
 // Stránka se otevře hned z uložené kopie a novou verzi souborů si stáhne na pozadí,
 // změny (i v apps.json a links.json) se tedy projeví až při dalším otevření.
 // Na localhostu (vývoj) jde naopak vše nejdřív ze sítě, ať jsou úpravy vidět hned.
-// Cizí adresy a servisní vrstva (jiný port) se neřeší.
+// Cizí adresy (fotky pozadí, ikony webů) se neřeší, fotky má v zásobě background.js.
 // Po změně seznamu souborů nebo chování zvyš VERSION, ať se stará cache smaže.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `rozcestnik-${VERSION}`;
 const DEV = ['localhost', '127.0.0.1', '[::1]'].includes(self.location.hostname);
 
@@ -25,6 +25,7 @@ const PRECACHE = [
   './js/apps.js',
   './js/links.js',
   './js/quicklinks.js',
+  './js/usericons.js',
   './js/background.js',
   './js/grid.js',
   './js/host.js',
@@ -35,7 +36,6 @@ const PRECACHE = [
   './widgets/registry.js',
   './widgets/clock.js',
   './widgets/apps.js',
-  './widgets/rss.js',
   './vendor/gridstack/gridstack-all.js',
   './vendor/gridstack/gridstack.min.css',
   './vendor/fonts/plus-jakarta-sans/latin.woff2',
@@ -59,7 +59,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(keys
-        .filter((k) => k.startsWith('rozcestnik-') && k !== CACHE)
+        .filter((k) => /^rozcestnik-v\d+$/.test(k) && k !== CACHE) // fotky a vlastní ikony zůstanou
         .map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );

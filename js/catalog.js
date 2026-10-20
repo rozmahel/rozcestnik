@@ -1,4 +1,4 @@
-// Panel nastavení (ozubené kolo): pozadí, vzhled, rychlé odkazy, widgety, servisní vrstva, data.
+// Panel nastavení (ozubené kolo): pozadí, vzhled, rychlé odkazy, widgety, data.
 // Změny se projeví hned, bez tlačítka Uložit.
 import * as store from './store.js';
 import { THEMES, setTheme } from './theme.js';
@@ -52,7 +52,7 @@ function defaultColor() {
 
 export function createCatalog({
   getItems, isEnabled, onToggle, onReset, onExport, onImport,
-  getServiceUrl, onServiceUrl, onBackground, onLinksView, onResetLinks,
+  onBackground, onLinksView, onResetLinks,
 }) {
   const dlg = el('dialog', 'panel');
   dlg.setAttribute('aria-labelledby', 'panel-title');
@@ -101,9 +101,7 @@ export function createCatalog({
         { value: 'day', label: 'Každý den' },
         { value: 'open', label: 'Při každém otevření' },
       ], bg.every, (v) => setBg({ every: v })));
-      bgParts.push(el('p', 'hint', s.serviceUrl
-        ? 'Zdroj: fotka dne z Bingu přes servisní vrstvu (když neodpovídá, Lorem Picsum).'
-        : 'Zdroj: Lorem Picsum. S nastavenou servisní vrstvou se použije fotka dne z Bingu.'));
+      bgParts.push(el('p', 'hint', 'Zdroj: Lorem Picsum. Další tři fotky jsou stažené dopředu, nová se tak ukáže hned i bez sítě.'));
     } else {
       const row = el('div', 'field row');
       const color = el('input');
@@ -146,7 +144,20 @@ export function createCatalog({
       checkbox('search-top', 'Vyhledávač nad odkazy', lv.searchTop, (v) => setLv({ searchTop: v })),
     ];
     if (lv.show) {
+      const align = el('div', 'segmented');
+      align.setAttribute('role', 'radiogroup');
+      align.setAttribute('aria-label', 'Zarovnání odkazů');
+      for (const [value, label] of [['left', 'Vlevo'], ['center', 'Střed'], ['right', 'Vpravo']]) {
+        const b = button(label, () => { if (lv.align !== value) setLv({ align: value }); });
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(lv.align === value));
+        b.dataset.focus = `links-align-${value}`;
+        align.append(b);
+      }
+      const alignRow = el('div', 'field row');
+      alignRow.append(el('span', '', 'Zarovnání'), align);
       linkParts.push(
+        alignRow,
         select('links-per-row', 'Odkazů na řádek', [4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => ({ value: n, label: String(n) })), lv.perRow, (v) => setLv({ perRow: Number(v) })),
         el('p', 'hint', 'Odkazy přidáš dlaždicí „+“, upravíš přes ⋮ u dlaždice. Každé patro je vlastní řádek: patro vybereš při přidání, odkaz mezi patry přesuneš přes ⋮ nebo přetažením (pod poslední patro = nové patro).'),
       );
@@ -183,30 +194,6 @@ export function createCatalog({
       list.append(li);
     }
     section('Widgety', list, el('p', 'hint', 'Přesouvat a zvětšovat je jde v režimu úprav (tužka vpravo nahoře).'));
-
-    // --- servisní vrstva
-    const service = el('form', 'catalog-service');
-    service.noValidate = true;
-    const serviceInput = el('input');
-    serviceInput.type = 'url';
-    serviceInput.placeholder = 'např. http://127.0.0.1:8787';
-    serviceInput.setAttribute('aria-label', 'Adresa servisní vrstvy');
-    serviceInput.dataset.focus = 'service';
-    serviceInput.value = getServiceUrl() ?? '';
-    const serviceSave = el('button', '', 'Uložit');
-    serviceSave.type = 'submit';
-    service.append(serviceInput, serviceSave);
-    service.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (onServiceUrl(serviceInput.value)) {
-        onBackground({ fresh: true });
-        render('Adresa servisní vrstvy uložena.');
-      } else {
-        msg.textContent = 'Adresa musí začínat http:// nebo https://.';
-        serviceInput.focus();
-      }
-    });
-    section('Servisní vrstva', service, el('p', 'hint', 'Volitelná. Potřebuje ji RSS čtečka a fotka dne z Bingu (node service/server.js).'));
 
     // --- data
     const file = el('input');

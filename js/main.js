@@ -13,6 +13,18 @@ import { initSearch } from './search/search.js';
 import { widgets, defaultLayout } from '../widgets/registry.js';
 
 const $ = (id) => document.getElementById(id);
+
+// úklid po odstraněné RSS čtečce
+try {
+  for (const k of Object.keys(localStorage)) if (k.startsWith('rozcestnik:w:rss:')) localStorage.removeItem(k);
+  const st = store.get();
+  if (st.settings.rss || st.layout?.some((i) => i.id === 'rss')) {
+    store.update((s) => {
+      delete s.settings.rss;
+      if (s.layout) s.layout = s.layout.filter((i) => i.id !== 'rss');
+    });
+  }
+} catch { /* nevadí */ }
 const narrow = () => window.matchMedia('(max-width: 640px)').matches;
 
 applyTheme();
@@ -134,8 +146,6 @@ const catalog = createCatalog({
     const date = new Date().toISOString().slice(0, 10);
     store.download(`rozcestnik-${date}.json`, store.exportJson());
   },
-  getServiceUrl: () => store.get().serviceUrl,
-  onServiceUrl: (value) => store.setServiceUrl(value),
   onBackground: (opts) => background.apply(opts),
   onLinksView: () => { applyOrder(); quick.render(); },
   onResetLinks: async () => { resetLinks(); await quick.load(); },

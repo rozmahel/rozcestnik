@@ -1,7 +1,7 @@
 # Rozcestník
 
 Úvodní stránka prohlížeče: vyhledávač, rozcestník na mé vlastní webové aplikace
-a plocha z přizpůsobitelných widgetů (hodiny, RSS, počasí, poznámky, ...).
+a plocha z přizpůsobitelných widgetů (hodiny, počasí, poznámky, ...).
 Cílem je, aby šly moduly dodělávat postupně, bez zásahu do jádra.
 
 ## Technická pravidla
@@ -10,9 +10,8 @@ Cílem je, aby šly moduly dodělávat postupně, bez zásahu do jádra.
   Přímé otevření `index.html` přes `file://` nefunguje (ES moduly, `fetch` na `apps.json`).
 - Malá knihovna (např. pro drag & drop mřížku) je povolená, jen když ušetří hodně práce.
   Vždy ji nejdřív navrhni v plánu a zdůvodni.
-- Funkce, které prohlížeč sám nezvládne (RSS kvůli CORS, kontrola dostupnosti aplikací),
-  jdou přes malou servisní vrstvu (lehký Node server nebo Cloudflare Worker).
-  Konkrétní řešení navrhni v plánu. Jádro na ní nesmí záviset, bez ní jen daný widget hlásí, že je nedostupný.
+- Žádná serverová část (servisní vrstva i RSS čtečka byly odstraněny). Co prohlížeč sám nezvládne
+  (např. kvůli CORS), se nedělá, nebo jen přes veřejné zdroje bez klíče, které čtení odjinud dovolí.
 - Žádná data nikam neposílat. Vše se ukládá lokálně (localStorage), žádné účty, žádné trackování.
 - Odkazy na mé aplikace jsou v `apps.json`, výchozí rychlé odkazy v `links.json`, nikdy napevno v kódu.
 
@@ -35,17 +34,21 @@ Widget nesmí sahat na DOM mimo svůj kontejner a nesmí shodit ostatní, když 
 
 ## Úvodní obrazovka (styl Brave)
 - Pozadí přes celou stránku (`js/background.js`): fotka, která se mění sama (denně nebo při každém otevření),
-  nebo jednobarevné (výchozí bledě zelená). Zdroj fotky: Bing „fotka dne“ přes servisní vrstvu (`/background`),
-  bez ní Lorem Picsum. Když se fotka nenačte, zůstane barva. Autor fotky vlevo dole.
+  nebo jednobarevné (výchozí bledě zelená). Zdroj fotky: Lorem Picsum. Zásoba: 3 další fotky stažené dopředu
+  v Cache API (`rozcestnik-foto`), při změně se vezme první z fronty a na konec se dotáhne nová.
+  Když se fotka nenačte, zůstane barva. Autor fotky vlevo dole.
 - Rychlé odkazy nahoře (`js/quicklinks.js`, data `js/links.js`): v patrech, každé patro je vlastní řádek
   (např. škola, soukromé, hry), bez popisků, jen větší mezera; 4–12 odkazů na řádek, delší patro se zalomí.
   V datech plochý seznam, odkaz má `floor` (1, 2, ...; chybí = první patro).
   Přidání dlaždicí „+“ (v dialogu výběr patra), úprava, přesun a odebrání přes ⋮, přeřazení přetažením,
   i mezi patry; puštění pod poslední patro založí nové. Ikony ze samotné stránky
   (z HTML, pokud ho web dovolí číst, např. GitHub Pages; jinak apple-touch-icon, favicon.ico), jinak barevné písmeno.
-  Volitelně (vypnuto) ostřejší ikony přes Google. Vyhledávač jde přesunout nad odkazy.
+  Volitelně (vypnuto) ostřejší ikony přes Google. Vlastní ikona: emoji, adresa obrázku, nebo nahraný obrázek
+  (`js/usericons.js`: zmenšený na PNG, uložený v Cache API `rozcestnik-ikony`; v datech jen cesta
+  `vlastni-ikony/<název>.png`, při výměně nová cesta; když soubor chybí, výchozí ikona; nepoužité se mažou).
+  Zarovnání pater vlevo / na střed / vpravo. Vyhledávač jde přesunout nad odkazy.
 - Vpravo nahoře tužka (režim úprav plochy) a ozubené kolo (panel nastavení `js/catalog.js`:
-  pozadí, motiv, odkazy, widgety, servisní vrstva, export/import).
+  pozadí, motiv, odkazy, widgety, export/import).
 - Pod vyhledávačem plocha widgetů; widgety jsou poloprůhledné karty.
 
 ## Vyhledávač
@@ -56,14 +59,12 @@ Widget nesmí sahat na DOM mimo svůj kontejner a nesmí shodit ostatní, když 
 ## Plánované widgety
 1. Hodiny: více časových pásem, analogové nebo digitální.
 2. Mé aplikace: mřížka odkazů z `apps.json`, správa (přidat, upravit, smazat, seřadit) přímo v rozhraní.
-3. RSS čtečka: více zdrojů, označení přečtených.
-4. Stav aplikací: zelená nebo červená tečka podle dostupnosti (servisní vrstva).
-5. Počasí (zdroj bez API klíče, např. Open-Meteo).
-6. Poznámky a úkoly.
-7. Pomodoro časovač.
-8. Odpočet do události (termíny, zkoušky).
-9. Kurzy měn.
-10. Kalendář s nadcházejícími událostmi.
+3. Počasí (zdroj bez API klíče, např. Open-Meteo).
+4. Poznámky a úkoly.
+5. Pomodoro časovač.
+6. Odpočet do události (termíny, zkoušky).
+7. Kurzy měn.
+8. Kalendář s nadcházejícími událostmi.
 
 Pořadí: nejdřív jádro (mřížka, registr widgetů, vyhledávač, ukládání), pak widgety 1 a 2,
 další přidávat po jednom.

@@ -296,6 +296,7 @@ dialog.panel[open] { display: flex; flex-direction: column; }
 }
 .segmented button { border: 0; background: none; min-height: 34px; border-radius: 9px; color: var(--muted); }
 .segmented button[aria-checked="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-soft); }
+.field.row .segmented { margin-bottom: 0; }
 
 /* multiselect v nastavení widgetu */
 .ms { display: grid; gap: 8px; }
@@ -325,8 +326,6 @@ dialog.panel[open] { display: flex; flex-direction: column; }
 .catalog-list strong { font-weight: 600; }
 .catalog-list small { grid-column: 2; color: var(--muted); }
 .catalog-message { color: var(--muted); min-height: 1.4em; margin: 8px 0 0; }
-.catalog-service { display: flex; gap: 8px; margin-bottom: 8px; }
-.catalog-service input { flex: 1; min-width: 0; }
 
 @media (max-width: 640px) {
   #btn-edit { display: none; }

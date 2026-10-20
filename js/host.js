@@ -38,22 +38,6 @@ function showError(body, text) {
   body.replaceChildren(p);
 }
 
-function makeService() {
-  const url = () => store.get().serviceUrl;
-  return {
-    get url() { return url(); },
-    async fetch(path, options) {
-      if (!url()) throw new Error('Servisní vrstva není nastavená.');
-      const base = new URL(url());
-      const target = new URL(path, base);
-      if (target.origin !== base.origin) throw new Error('Servisní vrstva smí volat jen vlastní adresu.');
-      const res = await fetch(target, options);
-      if (!res.ok) throw new Error(`Servisní vrstva vrátila ${res.status}.`);
-      return res;
-    },
-  };
-}
-
 // Připojí widget do těla `body`. Nikdy nevyhodí, chyba se zobrazí jen v tomto widgetu.
 export async function mount({ entry, mod }, body) {
   const settingsListeners = new Set();
@@ -71,7 +55,6 @@ export async function mount({ entry, mod }, body) {
     getApps,
     saveApps,
     resetApps,
-    service: makeService(),
   };
 
   let destroyed = false;
