@@ -22,6 +22,24 @@ const applyOrder = () => document.body.classList.toggle('search-top', store.get(
 applyOrder();
 const quickReady = quick.load().catch((e) => console.error('Rychlé odkazy se nepodařilo načíst', e));
 
+// Vyhledávání hned na začátku, ať jde psát dřív, než se načte plocha.
+// Widgety nabízí až po vykreslení plochy (do té doby by jejich zapnutí přepsalo uložené rozložení).
+let searchWidgets = [];
+initSearch(
+  { form: $('search'), input: $('search-input'), select: $('search-engine'), list: $('search-list') },
+  {
+    getApps,
+    getLinks,
+    getWidgets: () => searchWidgets,
+    onWidget: (id) => {
+      if (!instances.has(id)) { enable(id); persist(); }
+      grid.focus(id);
+    },
+    getEngine: () => store.get().search.engine,
+    setEngine: (prefix) => store.update((s) => { s.search.engine = prefix; }),
+  },
+);
+
 const loaded = await loadAll(widgets);
 const byId = new Map(loaded.map((l) => [l.entry.id, l]));
 const instances = new Map(); // id -> Promise<instance>
@@ -121,7 +139,6 @@ const catalog = createCatalog({
   onBackground: (opts) => background.apply(opts),
   onLinksView: () => { applyOrder(); quick.render(); },
   onResetLinks: async () => { resetLinks(); await quick.load(); },
-  getLinksCount: () => quick.count(),
   onImport: async (text) => {
     // i widgety, které se zrovna nenačetly, ať o své nastavení a polohu nepřijdou
     const mins = new Map(loaded.map((l) => [l.entry.id, l.manifest?.minSize ?? { w: 1, h: 1 }]));
@@ -151,19 +168,5 @@ window.matchMedia('(max-width: 640px)').addEventListener('change', (e) => {
   if (e.matches) setEditing(false);
 });
 
-initSearch(
-  { form: $('search'), input: $('search-input'), select: $('search-engine'), list: $('search-list') },
-  {
-    getApps,
-    getLinks,
-    getWidgets: () => loaded.filter((l) => l.manifest).map((l) => l.manifest),
-    onWidget: (id) => {
-      if (!instances.has(id)) { enable(id); persist(); }
-      grid.focus(id);
-    },
-    getEngine: () => store.get().search.engine,
-    setEngine: (prefix) => store.update((s) => { s.search.engine = prefix; }),
-  },
-);
-
 renderLayout();
+searchWidgets = loaded.filter((l) => l.manifest).map((l) => l.manifest);

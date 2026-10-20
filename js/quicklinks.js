@@ -1,4 +1,5 @@
-// Rychlé odkazy nad vyhledávačem: dlaždice s ikonou, až 3 řádky, přidání, úprava, odebrání, přeřazení.
+// Rychlé odkazy nad vyhledávačem: dlaždice s ikonou v patrech (každé patro = řádek),
+// přidání, úprava, odebrání, přeřazení a přesun mezi patry.
 // Ikony se berou ze samotné stránky (HTML, apple-touch-icon, favicon.ico); přes Google jen po zapnutí v nastavení.
 const ICON_KEY = 'rozcestnik:icons2';
 try { localStorage.removeItem('rozcestnik:icons'); } catch { /* starý formát mezipaměti */ }
@@ -183,22 +184,44 @@ function icon(link, google) {
 
 export const clearIconCache = () => iconCache.clear();
 
+// Patra: odkazy se stejným číslem patra tvoří vlastní řádek (0 = první). Popisky pater nejsou.
+function toFloors(list) {
+  const map = new Map();
+  for (const l of list) {
+    const f = Number.isInteger(l.floor) ? l.floor : 0;
+    if (!map.has(f)) map.set(f, []);
+    map.get(f).push(l);
+  }
+  return [...map.keys()].sort((a, b) => a - b).map((f) => map.get(f));
+}
+
+// Zpět na plochý seznam; prázdná patra zmizí, čísla pater se srovnají (0, 1, 2, ...).
+function flatten(floors) {
+  return floors
+    .filter((items) => items.length)
+    .flatMap((items, n) => items.map(({ floor, ...l }) => (n ? { ...l, floor: n } : l)));
+}
+
+const END = Infinity; // pozice „na konec patra“ (splice ji bere jako délku pole)
+
 // deps: { getLinks, saveLinks, getView }
 export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
-  let links = [];
-  let dragFrom = null;
+  let floors = []; // [[odkaz, ...], ...]
+  let dragFrom = null; // { f, i } přetahované dlaždice
+
+  const tileEl = (f, i) => root.querySelector(`.ql[data-f="${f}"][data-i="${i}"]`);
 
   // sdílené menu u dlaždice
   const menu = el('div', 'ql-pop');
   menu.setAttribute('role', 'menu');
   menu.hidden = true;
   document.body.append(menu);
-  let menuFor = null;
+  let menuFor = null; // { f, i }
 
   function closeMenu(returnFocus) {
     if (menu.hidden) return;
     menu.hidden = true;
-    if (returnFocus) root.querySelector(`.ql[data-i="${menuFor}"] .ql-more`)?.focus();
+    if (returnFocus && menuFor) tileEl(menuFor.f, menuFor.i)?.querySelector('.ql-more')?.focus();
     menuFor = null;
   }
 
@@ -208,9 +231,9 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(true); });
   window.addEventListener('resize', () => closeMenu(false));
 
-  function openMenu(i, anchor) {
-    if (menuFor === i && !menu.hidden) return closeMenu(true);
-    menuFor = i;
+  function openMenu(f, i, anchor) {
+    if (menuFor?.f === f && menuFor?.i === i && !menu.hidden) return closeMenu(true);
+    menuFor = { f, i };
     const item = (text, fn, cls = '') => {
       const b = el('button', cls, text);
       b.type = 'button';
@@ -218,10 +241,14 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
       b.addEventListener('click', () => { closeMenu(false); fn(); });
       return b;
     };
-    const items = [item('Upravit', () => openEditor(i))];
-    if (i > 0) items.push(item('Posunout doleva', () => move(i, i - 1)));
-    if (i < links.length - 1) items.push(item('Posunout doprava', () => move(i, i + 1)));
-    items.push(item('Odebrat', () => remove(i), 'danger'));
+    const row = floors[f];
+    const items = [item('Upravit', () => openEditor(f, i))];
+    if (i > 0) items.push(item('Posunout doleva', () => move({ f, i }, { f, i: i - 1 })));
+    if (i < row.length - 1) items.push(item('Posunout doprava', () => move({ f, i }, { f, i: i + 1 })));
+    if (f > 0) items.push(item('O patro výš', () => move({ f, i }, { f: f - 1, i: END })));
+    // z posledního patra dolů = nové patro (u jediného odkazu v patře by se nic nezměnilo)
+    if (f < floors.length - 1 || row.length > 1) items.push(item('O patro níž', () => move({ f, i }, { f: f + 1, i: END })));
+    items.push(item('Odebrat', () => remove(f, i), 'danger'));
     menu.replaceChildren(...items);
     menu.hidden = false;
     const r = anchor.getBoundingClientRect();
@@ -231,33 +258,42 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     menu.querySelector('button')?.focus();
   }
 
-  function persist(list, focusIndex) {
-    saveLinks(list);
-    links = list;
+  // Uloží nová patra a překreslí; fokus dostane zadaný odkaz, jinak dlaždice „+“.
+  function persist(next, focusLink) {
+    const kept = next.filter((items) => items.length);
+    const f = focusLink ? kept.findIndex((items) => items.includes(focusLink)) : -1;
+    const flat = flatten(kept);
+    saveLinks(flat);
+    floors = toFloors(flat);
     render();
-    if (focusIndex !== undefined) {
-      (root.querySelector(`.ql[data-i="${focusIndex}"] .ql-link`) ?? root.querySelector('.ql-add'))?.focus();
-    }
+    const target = f >= 0 ? tileEl(f, kept[f].indexOf(focusLink))?.querySelector('.ql-link') : null;
+    (target ?? root.querySelector('.ql-add'))?.focus();
   }
 
+  // Přesun odkazu; to.f === floors.length znamená nové patro dole.
   function move(from, to) {
-    const list = [...links];
-    const [it] = list.splice(from, 1);
-    list.splice(to, 0, it);
-    persist(list, to);
+    const next = floors.map((items) => [...items]);
+    const [it] = next[from.f].splice(from.i, 1);
+    if (to.f >= next.length) next.push([]);
+    next[to.f].splice(to.i, 0, it);
+    persist(next, it);
   }
 
-  function remove(i) {
-    if (!confirm(`Odebrat odkaz „${links[i].name}“?`)) return;
-    persist(links.filter((_, j) => j !== i), Math.min(i, links.length - 2));
+  function remove(f, i) {
+    if (!confirm(`Odebrat odkaz „${floors[f][i].name}“?`)) return;
+    const next = floors.map((items) => [...items]);
+    next[f].splice(i, 1);
+    persist(next, next[f][Math.min(i, next[f].length - 1)] ?? null);
   }
 
-  function openEditor(index) {
-    const link = index >= 0 ? links[index] : { name: '', url: '' };
+  // i = -1: nový odkaz do patra f
+  function openEditor(f, i) {
+    const editing = i >= 0;
+    const link = editing ? floors[f][i] : { name: '', url: '' };
     const dlg = el('dialog');
     const form = el('form');
     form.noValidate = true;
-    form.append(el('h2', '', index >= 0 ? 'Upravit odkaz' : 'Přidat odkaz'));
+    form.append(el('h2', '', editing ? 'Upravit odkaz' : 'Přidat odkaz'));
 
     const field = (label, value, type, placeholder) => {
       const l = el('label', 'field');
@@ -271,6 +307,22 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     };
     const url = field('Adresa', link.url, 'url', 'např. github.com');
     const name = field('Název', link.name, 'text', 'doplní se z adresy');
+
+    // patro: stávající + nové dole (dokud žádné odkazy nejsou, není co vybírat)
+    let floorSel = null;
+    if (floors.length) {
+      const l = el('label', 'field');
+      floorSel = el('select');
+      for (let n = 0; n <= floors.length; n++) {
+        const o = el('option', '', n < floors.length ? `${n + 1}. patro` : 'Nové patro');
+        o.value = String(n);
+        floorSel.append(o);
+      }
+      floorSel.value = String(f);
+      l.append(el('span', '', 'Patro'), floorSel);
+      form.append(l);
+    }
+
     const ico = field('Ikona (volitelně: emoji nebo adresa obrázku)', link.icon || '', 'text', 'prázdné = ikona stránky');
     const error = el('p', 'form-error');
     error.setAttribute('role', 'alert');
@@ -279,7 +331,7 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     const cancel = el('button', '', 'Zrušit');
     cancel.type = 'button';
     cancel.addEventListener('click', () => dlg.close());
-    const save = el('button', 'primary', index >= 0 ? 'Uložit' : 'Přidat');
+    const save = el('button', 'primary', editing ? 'Uložit' : 'Přidat');
     save.type = 'submit';
     row.append(cancel, save);
     form.append(error, row);
@@ -298,11 +350,18 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
       iconCache.set(href, undefined);
       iconCache.set(`g|${href}`, undefined);
       if (iconText) item.icon = iconText;
-      const list = [...links];
-      if (index >= 0) list[index] = item;
-      else list.push(item);
+
+      const target = floorSel ? Number(floorSel.value) : 0;
+      const next = floors.map((items) => [...items]);
+      if (editing && target === f) {
+        next[f][i] = item;
+      } else {
+        if (editing) next[f].splice(i, 1);
+        if (target >= next.length) next.push([]);
+        next[target].push(item);
+      }
       dlg.close();
-      persist(list, index >= 0 ? index : list.length - 1);
+      persist(next, item);
     });
 
     dlg.addEventListener('close', () => dlg.remove());
@@ -312,8 +371,9 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     url.focus();
   }
 
-  function tile(link, i, draggable) {
+  function tile(link, f, i) {
     const box = el('div', 'ql');
+    box.dataset.f = f;
     box.dataset.i = i;
     const a = el('a', 'ql-link');
     a.href = link.url;
@@ -326,34 +386,85 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     more.title = 'Možnosti';
     more.setAttribute('aria-label', `Možnosti: ${link.name}`);
     more.setAttribute('aria-haspopup', 'menu');
-    more.addEventListener('click', () => openMenu(i, more));
+    more.addEventListener('click', () => openMenu(f, i, more));
     box.append(a, more);
 
-    if (draggable) {
-      box.draggable = true;
-      box.addEventListener('dragstart', (e) => {
-        dragFrom = i;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', link.url);
-        box.classList.add('dragging');
-      });
-      box.addEventListener('dragend', () => {
-        dragFrom = null;
-        box.classList.remove('dragging');
-        root.querySelectorAll('.drop').forEach((n) => n.classList.remove('drop'));
-      });
-      box.addEventListener('dragover', (e) => {
-        if (dragFrom === null || dragFrom === i) return;
-        e.preventDefault();
-        box.classList.add('drop');
-      });
-      box.addEventListener('dragleave', () => box.classList.remove('drop'));
-      box.addEventListener('drop', (e) => {
-        e.preventDefault();
-        if (dragFrom !== null && dragFrom !== i) move(dragFrom, i);
-      });
-    }
+    box.draggable = true;
+    box.addEventListener('dragstart', (e) => {
+      dragFrom = { f, i };
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', link.url);
+      box.classList.add('dragging');
+      // zóna „nové patro“ až po startu tahu, změna vzhledu během dragstart by ho mohla zrušit
+      setTimeout(() => { if (dragFrom) root.classList.add('ql-dragging'); });
+    });
+    box.addEventListener('dragend', () => {
+      box.classList.remove('dragging');
+      endDrag();
+    });
     return box;
+  }
+
+  // --- přetahování: na dlaždici (vezme její místo), do volného místa patra (na konec), do zóny nového patra
+  const newFloor = el('div', 'ql-new-floor', 'Nové patro');
+  newFloor.setAttribute('aria-hidden', 'true');
+
+  function dropTarget(node) {
+    const n = node?.nodeType === 1 ? node : node?.parentElement; // Firefox posílá i textové uzly
+    if (!n || !dragFrom) return null;
+    if (n.closest('.ql-new-floor')) return { el: newFloor, to: { f: floors.length, i: 0 } };
+    const t = n.closest('.ql:not(.ql-add)');
+    if (t) {
+      const f = Number(t.dataset.f);
+      const i = Number(t.dataset.i);
+      return f === dragFrom.f && i === dragFrom.i ? null : { el: t, to: { f, i } };
+    }
+    const row = n.closest('.ql-floor');
+    return row ? { el: row, to: { f: Number(row.dataset.f), i: END } } : null;
+  }
+
+  // po puštění se dlaždice překreslí a dragend už nemusí přijít, proto úklid i tady
+  function endDrag() {
+    dragFrom = null;
+    root.classList.remove('ql-dragging');
+    mark(null);
+  }
+
+  let marked = null;
+  function mark(node) {
+    if (marked === node) return;
+    marked?.classList.remove('drop');
+    marked = node;
+    node?.classList.add('drop');
+  }
+
+  root.addEventListener('dragover', (e) => {
+    const target = dropTarget(e.target);
+    mark(target?.el ?? null);
+    if (target) e.preventDefault();
+  });
+  root.addEventListener('dragleave', (e) => {
+    if (!e.relatedTarget || !root.contains(e.relatedTarget)) mark(null);
+  });
+  root.addEventListener('drop', (e) => {
+    const target = dropTarget(e.target);
+    if (!target) return;
+    e.preventDefault();
+    const from = dragFrom;
+    endDrag();
+    move(from, target.to);
+  });
+
+  function addTile() {
+    const add = el('button', 'ql ql-add');
+    add.type = 'button';
+    add.setAttribute('aria-label', 'Přidat odkaz');
+    add.title = 'Přidat odkaz';
+    const plus = el('span', 'ql-ico');
+    plus.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+    add.append(plus, el('span', 'ql-name', 'Přidat'));
+    add.addEventListener('click', () => openEditor(Math.max(0, floors.length - 1), -1));
+    return add;
   }
 
   function render() {
@@ -361,31 +472,22 @@ export function createQuickLinks(root, { getLinks, saveLinks, getView }) {
     const view = getView();
     root.hidden = !view.show;
     if (!view.show) return;
-    const capacity = view.rows * view.perRow;
     root.style.setProperty('--per-row', view.perRow);
-    root.style.setProperty('--rows', view.rows);
-    const shown = links.slice(0, capacity);
-    const tiles = shown.map((l, i) => tile(l, i, true));
-    if (links.length < capacity) {
-      const add = el('button', 'ql ql-add');
-      add.type = 'button';
-      add.setAttribute('aria-label', 'Přidat odkaz');
-      add.title = 'Přidat odkaz';
-      const plus = el('span', 'ql-ico');
-      plus.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
-      add.append(plus, el('span', 'ql-name', 'Přidat'));
-      add.addEventListener('click', () => openEditor(-1));
-      tiles.push(add);
-    }
-    root.replaceChildren(...tiles);
+    const rows = (floors.length ? floors : [[]]).map((items, f) => {
+      const row = el('div', 'ql-floor');
+      row.dataset.f = f;
+      row.append(...items.map((l, i) => tile(l, f, i)));
+      return row;
+    });
+    rows.at(-1).append(addTile()); // „+“ na konci posledního patra
+    root.replaceChildren(...rows, newFloor);
   }
 
   return {
     async load() {
-      links = await getLinks();
+      floors = toFloors(await getLinks());
       render();
     },
     render,
-    count: () => links.length,
   };
 }

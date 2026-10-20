@@ -52,7 +52,7 @@ function defaultColor() {
 
 export function createCatalog({
   getItems, isEnabled, onToggle, onReset, onExport, onImport,
-  getServiceUrl, onServiceUrl, onBackground, onLinksView, onResetLinks, getLinksCount,
+  getServiceUrl, onServiceUrl, onBackground, onLinksView, onResetLinks,
 }) {
   const dlg = el('dialog', 'panel');
   dlg.setAttribute('aria-labelledby', 'panel-title');
@@ -147,14 +147,9 @@ export function createCatalog({
     ];
     if (lv.show) {
       linkParts.push(
-        select('links-rows', 'Počet řádků', [1, 2, 3].map((n) => ({ value: n, label: String(n) })), lv.rows, (v) => setLv({ rows: Number(v) })),
         select('links-per-row', 'Odkazů na řádek', [4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => ({ value: n, label: String(n) })), lv.perRow, (v) => setLv({ perRow: Number(v) })),
+        el('p', 'hint', 'Odkazy přidáš dlaždicí „+“, upravíš přes ⋮ u dlaždice. Každé patro je vlastní řádek: patro vybereš při přidání, odkaz mezi patry přesuneš přes ⋮ nebo přetažením (pod poslední patro = nové patro).'),
       );
-      const count = getLinksCount();
-      const cap = lv.rows * lv.perRow;
-      linkParts.push(el('p', 'hint', count > cap
-        ? `Zobrazeno ${cap} z ${count} odkazů. Zbytek se ukáže po přidání řádku.`
-        : `Odkazy přidáš dlaždicí „+“, upravíš přes ⋮ u dlaždice, pořadí změníš přetažením.`));
       linkParts.push(
         checkbox('google-icons', 'Ostřejší ikony přes Google', lv.googleIcons, (v) => setLv({ googleIcons: v })),
         el('p', 'hint', 'Když web sám nabízí jen malou ikonu (např. YouTube), vezme se větší od Googlu. Google tím uvidí domény tvých odkazů.'),

@@ -11,7 +11,7 @@ const defaults = () => ({
   serviceUrl: null,
   apps: null, // null = výchozí seznam z apps.json
   links: null, // null = výchozí rychlé odkazy z links.json
-  linksView: { show: true, rows: 2, perRow: 8, searchTop: false, googleIcons: false },
+  linksView: { show: true, perRow: 8, searchTop: false, googleIcons: false },
   background: { mode: 'photo', every: 'day', color: null },
 });
 
@@ -29,18 +29,30 @@ function cleanUrl(v) {
   }
 }
 
+const validEntry = (a) => isObject(a) && typeof a.name === 'string' && a.name.trim() && typeof a.url === 'string' && cleanUrl(a.url.trim());
+
+function cleanEntry(a) {
+  const app = { name: a.name.trim(), url: a.url.trim() };
+  if (typeof a.id === 'string' && a.id) app.id = a.id;
+  if (typeof a.icon === 'string' && a.icon.trim()) app.icon = a.icon.trim();
+  if (Array.isArray(a.tags)) app.tags = a.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim());
+  return app;
+}
+
 // Seznam aplikací: jen položky s názvem a http(s) adresou, ostatní pole se ořežou. Jiný tvar -> null.
 export function cleanApps(list) {
   if (!Array.isArray(list)) return null;
-  return list
-    .filter((a) => isObject(a) && typeof a.name === 'string' && a.name.trim() && typeof a.url === 'string' && cleanUrl(a.url.trim()))
-    .map((a) => {
-      const app = { name: a.name.trim(), url: a.url.trim() };
-      if (typeof a.id === 'string' && a.id) app.id = a.id;
-      if (typeof a.icon === 'string' && a.icon.trim()) app.icon = a.icon.trim();
-      if (Array.isArray(a.tags)) app.tags = a.tags.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim());
-      return app;
-    });
+  return list.filter(validEntry).map(cleanEntry);
+}
+
+// Rychlé odkazy: jako aplikace, navíc číslo patra (0 = první, chybí = první).
+export function cleanLinks(list) {
+  if (!Array.isArray(list)) return null;
+  return list.filter(validEntry).map((a) => {
+    const link = cleanEntry(a);
+    if (Number.isInteger(a.floor) && a.floor > 0) link.floor = Math.min(a.floor, 99);
+    return link;
+  });
 }
 
 // Zahodí položky se špatným tvarem; mins (Map id -> {w, h}) volitelně omezí na známé widgety.
@@ -72,7 +84,7 @@ function sanitize(data, mins) {
     search: { engine: typeof data.search?.engine === 'string' ? data.search.engine : d.search.engine },
     serviceUrl: cleanUrl(data.serviceUrl),
     apps: cleanApps(data.apps),
-    links: cleanApps(data.links),
+    links: cleanLinks(data.links),
     linksView: cleanLinksView(data.linksView),
     background: cleanBackground(data.background),
   };
@@ -83,7 +95,6 @@ function cleanLinksView(v) {
   if (!isObject(v)) return d;
   return {
     show: typeof v.show === 'boolean' ? v.show : d.show,
-    rows: clampInt(v.rows, 1, 3, d.rows),
     perRow: clampInt(v.perRow, 4, 12, d.perRow),
     searchTop: typeof v.searchTop === 'boolean' ? v.searchTop : d.searchTop,
     googleIcons: typeof v.googleIcons === 'boolean' ? v.googleIcons : d.googleIcons,

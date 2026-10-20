@@ -1,14 +1,39 @@
-/* Rychlé odkazy: řádky dlaždic nahoře, zarovnané na střed. Šířku řádku určuje --per-row. */
+/* Rychlé odkazy: patra pod sebou, každé patro je řádek dlaždic zarovnaný na střed.
+   Šířku řádku určuje --per-row. Mezera mezi patry je větší než mezi zalomenými řádky jednoho patra. */
 .links {
   --tile-w: 96px;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 4px;
+  flex-direction: column;
+  gap: 20px;
   width: 100%;
   max-width: calc(var(--per-row, 8) * (var(--tile-w) + 4px));
 }
 .links[hidden] { display: none; }
+
+.ql-floor {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 4px;
+  border-radius: 18px;
+}
+.ql-floor.drop { background: var(--on-bg-hover); }
+
+/* při přetahování: prázdné patro pod posledním, puštěním do něj vznikne nové */
+.ql-new-floor {
+  display: none;
+  place-items: center;
+  height: 56px;
+  border: 1.5px dashed currentColor;
+  border-radius: 14px;
+  color: var(--on-bg);
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+.links.ql-dragging .ql-new-floor { display: grid; }
+.ql-new-floor.drop { opacity: 1; background: var(--on-bg-hover); }
+[data-bg="photo"] .ql-new-floor { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65); }
 
 .ql { position: relative; width: var(--tile-w); }
 .ql-link, .ql-add {

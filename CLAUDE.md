@@ -37,8 +37,11 @@ Widget nesmí sahat na DOM mimo svůj kontejner a nesmí shodit ostatní, když 
 - Pozadí přes celou stránku (`js/background.js`): fotka, která se mění sama (denně nebo při každém otevření),
   nebo jednobarevné (výchozí bledě zelená). Zdroj fotky: Bing „fotka dne“ přes servisní vrstvu (`/background`),
   bez ní Lorem Picsum. Když se fotka nenačte, zůstane barva. Autor fotky vlevo dole.
-- Rychlé odkazy nahoře (`js/quicklinks.js`, data `js/links.js`): 1–3 řádky, 4–12 odkazů na řádek,
-  přidání dlaždicí „+“, úprava a odebrání přes ⋮, přeřazení přetažením. Ikony ze samotné stránky
+- Rychlé odkazy nahoře (`js/quicklinks.js`, data `js/links.js`): v patrech, každé patro je vlastní řádek
+  (např. škola, soukromé, hry), bez popisků, jen větší mezera; 4–12 odkazů na řádek, delší patro se zalomí.
+  V datech plochý seznam, odkaz má `floor` (1, 2, ...; chybí = první patro).
+  Přidání dlaždicí „+“ (v dialogu výběr patra), úprava, přesun a odebrání přes ⋮, přeřazení přetažením,
+  i mezi patry; puštění pod poslední patro založí nové. Ikony ze samotné stránky
   (z HTML, pokud ho web dovolí číst, např. GitHub Pages; jinak apple-touch-icon, favicon.ico), jinak barevné písmeno.
   Volitelně (vypnuto) ostřejší ikony přes Google. Vyhledávač jde přesunout nad odkazy.
 - Vpravo nahoře tužka (režim úprav plochy) a ozubené kolo (panel nastavení `js/catalog.js`:
@@ -46,6 +49,7 @@ Widget nesmí sahat na DOM mimo svůj kontejner a nesmí shodit ostatní, když 
 - Pod vyhledávačem plocha widgetů; widgety jsou poloprůhledné karty.
 
 ## Vyhledávač
+- po otevření je kurzor rovnou v poli (ne na dotykových zařízeních); psaní kdekoli na stránce jde do pole,
 - výběr vyhledávače, prefixy (`g dotaz`, `yt dotaz`, ...), ovládání klávesnicí,
 - hledá i v rychlých odkazech, v mých aplikacích z `apps.json` a v dostupných widgetech.
 
@@ -63,6 +67,11 @@ Widget nesmí sahat na DOM mimo svůj kontejner a nesmí shodit ostatní, když 
 
 Pořadí: nejdřív jádro (mřížka, registr widgetů, vyhledávač, ukládání), pak widgety 1 a 2,
 další přidávat po jednom.
+
+## Offline a rychlost (PWA)
+- `sw.js`: mimo localhost se vše z vlastního webu bere nejdřív z cache a na pozadí se stáhne nová verze
+  (změny se projeví až při dalším otevření). Na localhostu nejdřív ze sítě, ať jsou úpravy hned vidět.
+- Nový soubor jádra přidej do `PRECACHE` v `sw.js` a zvyš `VERSION`.
 
 ## Vzhled
 - světlý a tmavý režim podle systému s ručním přepnutím,

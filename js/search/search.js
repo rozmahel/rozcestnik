@@ -121,13 +121,20 @@ export function initSearch({ form, input, select, list }, deps) {
     if (text) go(buildUrl(engine, text));
   });
 
-  // „/“ přesune fokus do pole, pokud se zrovna nepíše jinde.
+  // Psaní kdekoli na stránce jde do pole (písmeno se rovnou propíše), „/“ jen přesune fokus.
+  // Neplatí, když se píše jinde, je otevřený dialog nebo jde o zkratku.
   document.addEventListener('keydown', (e) => {
     const t = e.target;
     const typing = t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
-    if (e.key === '/' && !typing && !document.querySelector('dialog[open]') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (typing || document.querySelector('dialog[open]') || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === '/') {
       e.preventDefault();
+      input.focus();
+    } else if ((e.key.length === 1 && e.key !== ' ') || e.key === 'Dead') { // Dead = čárka/háček před písmenem
       input.focus();
     }
   });
+
+  // Po otevření stránky kurzor rovnou v poli. Na dotykových zařízeních ne, vyskočila by klávesnice.
+  if (matchMedia('(pointer: fine)').matches) input.focus({ preventScroll: true });
 }
